@@ -1,10 +1,10 @@
 const { default: mongoose } = require("mongoose");
 const UserModel = require("../models/UserModel");
 const bcrypt = require("bcrypt");
-const { isValid } = require("../validation/validator");
+const { isValid, unique } = require("../validation/validator");
 const { isValidObjectId } = mongoose;
 
-const keys = ["fname", "lname", "email", "profileImage", "phone", "password"];
+const keys = ["fname", "lname", "email", "phone", "password"];
 
 const create = async (req, res) => {
   try {
@@ -20,17 +20,11 @@ const create = async (req, res) => {
       if (!isValid(userData[keys[i]])) {
         return res
           .status(400)
-          .send({ status: false, message: "missing mandatory fields" });
+          .send({ status: false, message: ` ${keys[i]} missing` });
       }
     }
 
     if (
-      !isValid(fname) ||
-      !isValid(lname) ||
-      !isValid(email) ||
-      !isValid(phone) ||
-      !isValid(password) ||
-      !isValid(address.shipping) ||
       !isValid(address.shipping.street) ||
       !isValid(address.shipping.city) ||
       !isValid(address.shipping.pincode) ||
@@ -44,11 +38,17 @@ const create = async (req, res) => {
     }
     // unique validation
 
-    const alreadyUser = await UserModel.find({ $or: [{ email }, { phone }] });
-    if (alreadyUser.length > 0)
+    // const alreadyUser = await UserModel.find({ $or: [{ email }, { phone }] });
+    // if (alreadyUser.length > 0)
+    //   return res
+    //     .status(400)
+    //     .send({ status: false, message: "user already exists" });
+
+    const user = unique(UserModel, email, phone);
+    if (user)
       return res
         .status(400)
-        .send({ status: false, message: "user already exists" });
+        .sen({ status: false, message: "user already exists" });
 
     //valid password
 
@@ -72,13 +72,10 @@ const create = async (req, res) => {
 
 const login = async (req, res) => {
   const { email, password } = req.body;
-
   const user = await UserModel.findOne({ email, password });
-
   if (!user) {
     return res.status(401).send({ status: false, message: "unauthenticated" });
   }
-
   const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expireIn: "1d" });
   return res.status(200).send({
     status: true,
@@ -108,11 +105,17 @@ const getProfile = async (req, res) => {
 const updateUser = async (req, res) => {
   const id = req.params.userId;
   if (!isValidObjectId(id))
-    return res.status(404).send({ status: false, message: "user Not found" });
+    return res.status(400).send({ status: false, message: "user Not found" });
   if (id !== req["x-api-key"])
     return res.status(403).send({ status: false, message: "unauthorized" });
 
   //  validation check
+  //  const values = Object.keys(req.body)
+  //  for(let key of values){
+  //   if(!isValid(req.body[key])){
+  //     return res.status(400).send({status : false, message : `invalid ${key}`})
+  //   }
+  //  }
 
   const updatedUser = await UserModel.findByIdAndUpdate(id, req.body, {
     new: true,
@@ -129,5 +132,5 @@ module.exports = {
   create,
   login,
   getProfile,
-  updatedUser,
+  updateUser,
 };

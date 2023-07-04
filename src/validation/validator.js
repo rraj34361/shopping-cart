@@ -4,5 +4,16 @@ const isValid = (value)=>{
     return true
 }
 
+const unique = async (model, ...key)=>{
+    const data = await  model.findOne({$or : [...key]})
+    if(data){
 
-module.exports = { isValid}
+        return "duplicate" ;
+    }else{
+        return ;
+    }
+}
+
+module.exports = { isValid, unique}
+
+
