@@ -3,21 +3,21 @@ const ObjectId = mongoose.Types.ObjectId;
 
 const OrderSchema = new mongoose.Schema(
     {
-        userId: {ObjectId, ref : "user", required : true},
+        userId: {type : ObjectId, ref : "user", required : true},
         items: [{
-          productId: {ObjectId, ref : "product", required : true},
-          quantity: {Number, mandatory, min: 1}
+          productId: {type : ObjectId, ref : "product", required : true},
+          quantity: {type  :  Number, mandatory, min: 1}
         }],
-        totalPrice: {Number, required : true, comment: "Holds total price of all the items in the cart"},
-        totalItems: {Number, required : true, comment: "Holds total number of items in the cart"},
-        totalQuantity: {Number, required : true, comment: "Holds total number of quantity in the cart"},
-        cancellable: {Boolean, default: true},
-        status: {string, default: 'pending', enum : [pending, completed, cancled]},
-        deletedAt: {Date}, 
-        isDeleted: {Boolean, default: false},
+        totalPrice: {type  :  Number, required : true, comment: "Holds total price of all the items in the cart"},
+        totalItems: {type  :  Number, required : true, comment: "Holds total type  :  Number of items in the cart"},
+        totalQuantity: {type  :  Number, required : true, comment: "Holds total type  :  Number of quantity in the cart"},
+        cancellable: {type : Boolean, default: true},
+        status: {type : String, default: 'pending', enum : [pending, completed, cancled]},
+        deletedAt: {type : Date}, 
+        isDeleted: {type : Boolean, default: false},
         
       },
-  { timestamps }
+  { timestamps : true }
 );
 
 module.exports = mongoose.model("order", OrderSchema);

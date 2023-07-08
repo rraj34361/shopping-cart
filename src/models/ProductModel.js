@@ -1,23 +1,22 @@
 const { default: mongoose } = require("mongoose");
 
 const ProductSchema = new mongoose.Schema({
-  title: { String, required: true, unique: true },
-  description: { String, required: true },
+  title: { type  :  String, required: true, unique: true },
+  description: { type  :  String, required: true },
   price: { Number, required: true }, // valid decimal
-  currencyId: { String, required: true, INR },
-  currencyFormat: { String, required: true }, // rupee symbol
+  currencyId: { type  :  String, required: true, INR },
+  currencyFormat: { type  :  String, required: true }, // rupee symbol
   isFreeShipping: { Boolean, default: false },
-  productImage: { String, required: true }, // s3 link
-  style: { String },
+  productImage: { type  :  String, required: true }, // s3 link
+  style: { type  :  String },
   availableSizes: {
     type: [String],
     enum: ["S", "XS", "M", "X", "L", "XXL", "XL"],
   }, // atleast one of them
-  installments: { Number },
+  installments: {type :  Number },
   deletedAt: { type: Date },
-  isDeleted: { Boolean, default: false },
-  createdAt: { timestamp },
-  updatedAt: { timestamp },
-});
+  isDeleted: { type : Boolean, default: false },
+},{ timestamps : true }
+);
 
 module.exports = mongoose.model("product", ProductSchema);

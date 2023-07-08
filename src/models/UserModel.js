@@ -2,26 +2,26 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    fname: { String, required: true },
-    lname: { String, required: true },
-    email: { String, required: true, unique: true }, //valid email
-    profileImage: { String, required: true },
-    phone: { String, required: true, unique: true }, //valid indian number
-    password: { String, required: true, minLen: 8, maxLen: 15 },
+    fname: { type:String, required: true },
+    lname: { type:String, required: true },
+    email: { type:String, required: true, unique: true }, //valid email
+    profileImage: { type:String, required: true },
+    phone: { type:String, required: true, unique: true }, //valid indian type:Number
+    password: { type:String, required: true, minLen: 8, maxLen: 15 },
     address: {
       shipping: {
-        street: { String, required: true },
-        city: { String, required: true },
-        pincode: { Number, required: true },
+        street: { type:String, required: true },
+        city: { type:String, required: true },
+        pincode: { type:Number, required: true },
       },
       billing: {
-        street: { String, required: true },
-        city: { String, required: true },
-        pincode: { Number, required: true },
+        street: { type:String, required: true },
+        city: { type:String, required: true },
+        pincode: { type:Number, required: true },
       },
     },
   },
-  { timestamps: true }
+  { timestamps : true }
 );
 
 module.exports = mongoose.model("user", UserSchema);

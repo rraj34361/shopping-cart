@@ -5,12 +5,16 @@ const isValid = (value)=>{
 }
 
 const unique = async (model, ...key)=>{
-    const data = await  model.findOne({$or : [...key]})
+    try {
+        const data = await  model.findOne({$or : [...key]})
+    console.log(data)
     if(data){
-
-        return "duplicate" ;
+        return false ;
     }else{
-        return ;
+        return true;
+    }
+    } catch (error) {
+        console.log(error.message)
     }
 }
 
