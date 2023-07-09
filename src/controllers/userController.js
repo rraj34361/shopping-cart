@@ -7,15 +7,13 @@ const { isValidObjectId } = mongoose;
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
 const {SECRET_KEY} = process.env
+const {isEmail} = require('validator')
 
 const keys = ["fname", "lname", "email", "phone", "password"];
 
 const create = async (req, res) => {
   try {
     const userData = req.body;
-
-    const valid = "to be made"; //TODO
-    // TODO S3 image
 
     let { fname, lname, email,  phone, password, address } =
       userData;
@@ -30,7 +28,7 @@ const create = async (req, res) => {
           .send({ status: false, message: ` ${keys[i]} missing` });
       }
     }
-
+ 
 
     if (
       !isValid(address.shipping.street) ||
@@ -44,6 +42,25 @@ const create = async (req, res) => {
         .status(400)
         .send({ status: false, message: "missing mandatory fields" });
     }
+
+
+    if (file.length === 0) {
+      res.status(400).json({ status: false, message: 'Please upload profile image' });
+  }
+
+
+       // valid email
+       if(!isEmail(email)){
+        return res.status(400).json({status:false, message: 'Please enter valid email'})
+    }
+        
+      //valid indian mobile number
+      if(!(/^[6789]\d{9}$/.test(phone))){
+        return res
+        .status(400)
+        .send({ status: false, message: "invalid number" });
+      }
+
     // unique validation
 
     const alreadyUser = await UserModel.find({ $or: [{ email }, { phone }] });
@@ -65,7 +82,8 @@ const create = async (req, res) => {
         .status(400)
         .send({ status: false, message: "please input a valid password" });
     }
-    const updatedPass = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt();
+    const updatedPass = await bcrypt.hash(password, salt);
 
     userData.password = updatedPass;
       req.body.profileImage = await uploadFile(file[0])
@@ -81,44 +99,104 @@ const create = async (req, res) => {
 //=============================================//
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
+
+  if (!isValid(email) || !isValid(password)) {
+    res.status(400).json({ status: false, message: 'Please enter email and password' });
+}
+
   const user = await UserModel.findOne({ email, password });
+
+
   if (!user) {
     return res.status(401).send({ status: false, message: "unauthenticated" });
   }
-  const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1d" });
+
+  const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            res.status(401).json({ status: false, message: 'Invalid password' });
+        }
+
+  const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "24h" });
+  res.setHeader('x-api-key', token);
   return res.status(200).send({
     status: true,
     message: "User Login Successfully",
     data: { userId: user._id, token },
-  });
+  })
+  } catch (error) {
+    res.status(500).send({ status: false, message: error.message });
+  }
 };
 
 const getProfile = async (req, res) => {
-  // valid object id check i have to do
-
-  const id = req.params.userId;
-  if (!isValidObjectId(id))
-    return res.status(404).send({ status: false, message: "user Not found" });
-  if (id !== req["x-api-key"])
-    return res.status(403).send({ status: false, message: "unauthorized" });
-  // doubt over this i think it is not required
-  const user = await UserModel.findById(id);
-  if (!user) {
-    return res.status(404).send({ statu: false, message: "user not found" });
-  }
-  return res
-    .status(200)
-    .send({ status: true, message: "user profiles details", data: user });
+ try {
+   // valid object id check i have to do
+   const id = req.params.userId;
+   if (!isValidObjectId(id))
+     return res.status(404).send({ status: false, message: "user Not found" });
+   if (id !== req["x-api-key"])
+     return res.status(403).send({ status: false, message: "unauthorized" });
+   // doubt over this i think it is not required
+   const user = await UserModel.findById(id);
+   if (!user) {
+     return res.status(404).send({ statu: false, message: "user not found" });
+   }
+   return res
+     .status(200)
+     .send({ status: true, message: "user profiles details", data: user })
+ } catch (error) {
+  res.status(500).send({ status: false, message: error.message });
+ }
 };
 
 const updateUser = async (req, res) => {
-  const id = req.params.userId;
+  try {
+    const id = req.params.userId;
+    let data = req.body;
   if (!isValidObjectId(id))
-    return res.status(400).send({ status: false, message: "user Not found" });
+    return res.status(400).send({ status: false, message: "invalid userId" });
+    if (!data) {
+        return res.status(400).json({ status: false, message: 'Please enter data' });
+    }
   if (id !== req["x-api-key"])
     return res.status(403).send({ status: false, message: "unauthorized" });
-
+     
+    const user = await UserModel.findById(id);
+        if (!user) {
+            res.status(404).json({ status: false, message: 'User not found' });
+        }
+        if (data.email) {
+          const emailCheck = await UserModel.findOne({ email: data.email });
+          if (emailCheck) {
+              res.status(400).json({ status: false, message: 'Email already exists' });
+          }
+          if(!isEmail(data.email)){
+              return res.status(400).json({status:false, message: 'Please enter valid email'})
+          }
+      }
+      if (data.phone) {
+        const phoneCheck = await UserModel.findOne({ phone: data.phone });
+        if (phoneCheck) {
+            res.status(400).json({ status: false, message: 'Phone number already exists' });
+        }
+        if(!(/^[6789]\d{9}$/.test(data.phone))){
+          return res
+          .status(400)
+          .send({ status: false, message: "invalid number" });
+        }
+    }
+     if(data.password){
+         if (data.password.length >= 15 || data.password.length <= 8) {
+      return res
+        .status(400)
+        .send({ status: false, message: "please input a valid password" });
+    }
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(data.password, salt);
+    data.password = hashedPassword
+  }
   //  validation check
   //  const values = Object.keys(req.body)
   //  for(let key of values){
@@ -127,15 +205,18 @@ const updateUser = async (req, res) => {
   //   }
   //  }
 
-  const updatedUser = await UserModel.findByIdAndUpdate(id, req.body, {
+  const updatedProfile = await UserModel.findByIdAndUpdate(id, {$set : req.body}, {
     new: true,
   });
 
   return res.status(200).send({
     status: true,
-    message: "updated user successfully",
-    data: updatedUser,
+    message: "User updated successfully",
+    data: updatedProfile,
   });
+  } catch (error) {
+    res.status(500).send({ status: false, message: error.message });
+  }
 };
 
 module.exports = {

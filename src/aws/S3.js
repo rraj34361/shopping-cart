@@ -2,7 +2,6 @@ const aws = require('aws-sdk');
 require("dotenv").config()
 const { AWS_ACCESS_KEY_SECRET, AWS_ACCESS_KEY } = process.env
 
-
 aws.config.update({
     accessKeyId: AWS_ACCESS_KEY,
     secretAccessKey: AWS_ACCESS_KEY_SECRET,
