@@ -45,13 +45,13 @@ const create = async (req, res) => {
 
 
     if (file.length === 0) {
-      res.status(400).json({ status: false, message: 'Please upload profile image' });
+      return res.status(400).send({ status: false, message: 'Please upload profile image' });
   }
 
 
        // valid email
        if(!isEmail(email)){
-        return res.status(400).json({status:false, message: 'Please enter valid email'})
+        return  res.status(400).send({status:false, message: 'Please enter valid email'})
     }
         
       //valid indian mobile number
@@ -89,10 +89,9 @@ const create = async (req, res) => {
       req.body.profileImage = await uploadFile(file[0])
     const userDocument = await UserModel.create(userData);
 
-    return res.status(201).send({ status: true, message: "user created", data : userDocument });
+    return  res.status(201).send({ status: true, message: "user created", data : userDocument });
   } catch (err) {
-    console.log(err.message);
-    res.status(500).send({ status: false, message: err.message });
+    return res.status(500).send({ status: false, message: err.message });
   }
 };
 
@@ -103,51 +102,51 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
   if (!isValid(email) || !isValid(password)) {
-    res.status(400).json({ status: false, message: 'Please enter email and password' });
+    return res.status(400).send({ status: false, message: 'Please enter email and password' });
 }
 
-  const user = await UserModel.findOne({ email, password });
+  const user = await UserModel.findOne({ email});
 
 
   if (!user) {
-    return res.status(401).send({ status: false, message: "unauthenticated" });
+    return  res.status(401).send({ status: false, message: "unauthenticated" });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            res.status(401).json({ status: false, message: 'Invalid password' });
+         return res.status(401).send({ status: false, message: 'Invalid password' });
         }
 
   const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "24h" });
   res.setHeader('x-api-key', token);
-  return res.status(200).send({
+  return  res.status(200).send({
     status: true,
     message: "User Login Successfully",
     data: { userId: user._id, token },
   })
   } catch (error) {
-    res.status(500).send({ status: false, message: error.message });
+    return res.status(500).send({ status: false, message: error.message });
   }
 };
 
 const getProfile = async (req, res) => {
  try {
-   // valid object id check i have to do
+   // valid object id check 
    const id = req.params.userId;
    if (!isValidObjectId(id))
-     return res.status(404).send({ status: false, message: "user Not found" });
-   if (id !== req["x-api-key"])
-     return res.status(403).send({ status: false, message: "unauthorized" });
+     return  res.status(400).send({ status: false, message: "user Not found" });
+   if (id.toString() !== req["x-api-key"])
+     return  res.status(403).send({ status: false, message: "unauthorized" });
    // doubt over this i think it is not required
    const user = await UserModel.findById(id);
    if (!user) {
-     return res.status(404).send({ statu: false, message: "user not found" });
+     return  res.status(404).send({ statu: false, message: "user not found" });
    }
    return res
      .status(200)
      .send({ status: true, message: "user profiles details", data: user })
  } catch (error) {
-  res.status(500).send({ status: false, message: error.message });
+  return res.status(500).send({ status: false, message: error.message });
  }
 };
 
@@ -155,36 +154,38 @@ const updateUser = async (req, res) => {
   try {
     const id = req.params.userId;
     let data = req.body;
+    //validate objectId
   if (!isValidObjectId(id))
-    return res.status(400).send({ status: false, message: "invalid userId" });
-    if (!data) {
-        return res.status(400).json({ status: false, message: 'Please enter data' });
+    return  res.status(400).send({ status: false, message: "invalid userId" });
+    if ((Object.keys(data)).length === 0 && !req.files) {
+        return  res.status(400).send({ status: false, message: 'Please enter data' });
     }
-  if (id !== req["x-api-key"])
-    return res.status(403).send({ status: false, message: "unauthorized" });
+  if (id.toString() !== req["x-api-key"])
+    return  res.status(403).send({ status: false, message: "unauthorized" });
      
     const user = await UserModel.findById(id);
         if (!user) {
-            res.status(404).json({ status: false, message: 'User not found' });
+            return res.status(404).send({ status: false, message: 'User not found' });
         }
         if (data.email) {
+          if (!isEmail(data.email)) {
+            return res.status(400).send({ status: false, message: 'Please enter valid email' })
+        }
           const emailCheck = await UserModel.findOne({ email: data.email });
           if (emailCheck) {
-              res.status(400).json({ status: false, message: 'Email already exists' });
+              return res.status(400).send({ status: false, message: 'Email already exists' });
           }
-          if(!isEmail(data.email)){
-              return res.status(400).json({status:false, message: 'Please enter valid email'})
-          }
+          
       }
       if (data.phone) {
         const phoneCheck = await UserModel.findOne({ phone: data.phone });
-        if (phoneCheck) {
-            res.status(400).json({ status: false, message: 'Phone number already exists' });
-        }
         if(!(/^[6789]\d{9}$/.test(data.phone))){
           return res
           .status(400)
           .send({ status: false, message: "invalid number" });
+        }
+        if (phoneCheck) {
+            return res.status(400).send({ status: false, message: 'Phone number already exists' });
         }
     }
      if(data.password){
@@ -201,21 +202,21 @@ const updateUser = async (req, res) => {
   //  const values = Object.keys(req.body)
   //  for(let key of values){
   //   if(!isValid(req.body[key])){
-  //     return res.status(400).send({status : false, message : `invalid ${key}`})
+  //     return  res.status(400).send({status : false, message : `invalid ${key}`})
   //   }
   //  }
 
-  const updatedProfile = await UserModel.findByIdAndUpdate(id, {$set : req.body}, {
+  const updatedProfile = await UserModel.findByIdAndUpdate(id, {$set : data}, {
     new: true,
   });
 
-  return res.status(200).send({
+  return  res.status(200).send({
     status: true,
     message: "User updated successfully",
     data: updatedProfile,
   });
   } catch (error) {
-    res.status(500).send({ status: false, message: error.message });
+    return res.status(500).send({ status: false, message: error.message });
   }
 };
 

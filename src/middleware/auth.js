@@ -17,7 +17,7 @@ const auth= async (req, res, next) => {
                 message: 'Unauthorized'
             })}else{
  
-                req['x-api-key']= decoded.userId
+                req['x-api-key']= decoded.userId.toString()
                 next()
             }
         })

@@ -2,6 +2,7 @@ const express = require("express");
 const routes = require("./routes/routes")
 const multer  = require('multer')
 const mongoose = require('mongoose')
+// const { isValidObjectId } = mongoose;
 require('dotenv').config()
 const {MONGOURL} = process.env
 const server = express();
@@ -15,6 +16,7 @@ mongoose.connect(MONGOURL, {
     console.log('mongoDb is connected')
 }).catch((err)=> console.log(err.message))
  
+// console.log(isValidObjectId(undefined))
 
 server.use("/",routes);
 
