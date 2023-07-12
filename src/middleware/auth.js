@@ -48,7 +48,7 @@ verifyToken(token, SECRET_KEY)
     next();
   })
   .catch(error => {
-    res.status(error.status).send({
+   return  res.status(error.status).send({
       status: false,
       message: error.message
     });
