@@ -4,10 +4,10 @@ const UserSchema = new mongoose.Schema(
   {
     fname: { type:String, required: true },
     lname: { type:String, required: true },
-    email: { type:String, required: true, unique: true }, //valid email
+    email: { type:String, required: true, lowercase : true, unique: true }, //valid email
     profileImage: { type:String, required: true },
     phone: { type:String, required: true, unique: true }, //valid indian type:Number
-    password: { type:String, required: true, minLen: 8, maxLen: 15 },
+    password: { type:String, required: true, min: 8, max: 15 },
     address: {
       shipping: {
         street: { type:String, required: true },

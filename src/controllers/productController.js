@@ -40,7 +40,7 @@ const createProduct = async (req, res) => {
                 return res.status(400).send({ status: false, message: 'Please upload product image' });
             }
         }
-        const productImage = await uploadFile(files[0]);
+        const productImage = await uploadFile(files[0], 'user');
 
         const productDetail = {
             title: title,
@@ -74,13 +74,24 @@ const getProduct = async (req, res) => {
             filterDetail.title = { $regex: name, $options: 'i' };
         }
         if (priceGreaterThan) {
-            filter.price = { $gt: parseFloat(priceGreaterThan) };
+       if(isNaN(Number(priceGreaterThan))){
+        return res.status(400).send({ status: false, message: 'priceGreaterThan should be a valid number' });
+
+       }
+            filter.price = { $gte: parseFloat(priceGreaterThan) };
         }
         if (priceLessThan) {
-            filter.price = { ...filter.price, $lt: parseFloat(priceLessThan) };
+            if(isNaN(Number(priceLessThan))){
+                return res.status(400).send({ status: false, message: 'priceLessThan should be a valid number' });
+               }
+            filter.price = { ...filter.price, $lte: parseFloat(priceLessThan) };
         }
         let sortOption = {};
-        if (priceSort) {
+        if (isValid(priceSort)) {
+            if(!((priceSort == 1)  || (priceSort == -1))){
+                return res.status(400).send({ status: false, message: 'priceSort should be 1 or -1' });
+
+            }
             sortOption.price = JSON.parse(parseInt(priceSort));
         }
         const products = await ProductModel.find(filterDetail).sort(sortOption);

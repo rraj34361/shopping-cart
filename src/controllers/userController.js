@@ -15,7 +15,7 @@ const create = async (req, res) => {
   try {
     const userData = req.body;
 
-    let { fname, lname, email,  phone, password, address } =
+    let { fname, lname, email,  phone, password} =
       userData;
       // console.log(fname)
       let file = req.files
@@ -28,7 +28,7 @@ const create = async (req, res) => {
           .send({ status: false, message: ` ${keys[i]} missing` });
       }
     }
- 
+       const address = JSON.parse(req.body.address)
 
     if (
       !isValid(address.shipping.street) ||
@@ -43,8 +43,8 @@ const create = async (req, res) => {
         .send({ status: false, message: "missing mandatory fields" });
     }
 
-
-    if (file.length === 0) {
+      req.body.address = address
+    if (!file || (file && file.length === 0)) {
       return res.status(400).send({ status: false, message: 'Please upload profile image' });
   }
 
@@ -55,7 +55,7 @@ const create = async (req, res) => {
     }
         
       //valid indian mobile number
-      if(!(/^[6789]\d{9}$/.test(phone))){
+      if(!(/^[0]?[789]\d{9}$/.test(phone))){
         return res
         .status(400)
         .send({ status: false, message: "invalid number" });
@@ -89,7 +89,11 @@ const create = async (req, res) => {
       req.body.profileImage = await uploadFile(file[0])
     const userDocument = await UserModel.create(userData);
 
-    return  res.status(201).send({ status: true, message: "user created", data : userDocument });
+     newUser = userDocument.toObject();
+
+     delete (newUser.password)
+
+    return  res.status(201).send({ status: true, message: "user created", data : newUser });
   } catch (err) {
     return res.status(500).send({ status: false, message: err.message });
   }
@@ -117,8 +121,8 @@ const login = async (req, res) => {
          return res.status(401).send({ status: false, message: 'Invalid password' });
         }
 
-  const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "24h" });
-  res.setHeader('x-api-key', token);
+  const token = jwt.sign({ userId: user._id , iat : Math.floor(Date.now()/1000), exp : Math.floor(Date.now()/1000) }, SECRET_KEY, { expiresIn: "24h" });
+
   return  res.status(200).send({
     status: true,
     message: "User Login Successfully",
@@ -142,9 +146,14 @@ const getProfile = async (req, res) => {
    if (!user) {
      return  res.status(404).send({ statu: false, message: "user not found" });
    }
+      
+      const newUser = user.toObject()
+
+      delete (newUser.password)
+
    return res
      .status(200)
-     .send({ status: true, message: "user profiles details", data: user })
+     .send({ status: true, message: "user profiles details", data: newUser })
  } catch (error) {
   return res.status(500).send({ status: false, message: error.message });
  }
@@ -175,11 +184,13 @@ const updateUser = async (req, res) => {
           if (emailCheck) {
               return res.status(400).send({ status: false, message: 'Email already exists' });
           }
+
+          user.email = data.email
           
       }
       if (data.phone) {
         const phoneCheck = await UserModel.findOne({ phone: data.phone });
-        if(!(/^[6789]\d{9}$/.test(data.phone))){
+        if(isNaN(Number(data.phone))  || !(/^[0]?[789]\d{9}$/.test(data.phone))){
           return res
           .status(400)
           .send({ status: false, message: "invalid number" });
@@ -187,6 +198,7 @@ const updateUser = async (req, res) => {
         if (phoneCheck) {
             return res.status(400).send({ status: false, message: 'Phone number already exists' });
         }
+        user.phone = data.phone
     }
      if(data.password){
          if (data.password.length >= 15 || data.password.length <= 8) {
@@ -196,8 +208,8 @@ const updateUser = async (req, res) => {
     }
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(data.password, salt);
-    data.password = hashedPassword
-  }
+    user.password = hashedPassword
+  } 
   //  validation check
   //  const values = Object.keys(req.body)
   //  for(let key of values){
@@ -206,14 +218,36 @@ const updateUser = async (req, res) => {
   //   }
   //  }
 
-  const updatedProfile = await UserModel.findByIdAndUpdate(id, {$set : data}, {
-    new: true,
-  });
+    if(data.address){
+      const address = JSON.parse(data.address)
+     if(address.shipping){
+      if(address.shipping.street)  user.address.shipping.street = address.shipping.street  
+      if(address.shipping.city)  user.address.shipping.city = address.shipping.city  
+      if(address.shipping.pincode)  user.address.shipping.pincode = address.shipping.pincode  
+     }
+     if(address.billing){
+      if(address.billing.street)  user.address.billing.street = address.billing.street  
+      if(address.billing.city)  user.address.billing.city = address.billing.city  
+      if(address.billing.pincode)  user.address.billing.pincode = address.billing.pincode  
+     }
+    }
 
+    if(req.files  && req.files.length>0){
+      const profileImage = await uploadFile(files[0], 'user')
+      user.profileImage = profileImage
+    }
+
+  const updatedProfile = await user.save()
+
+  const strUser = JSON.stringify(updatedProfile)
+
+  const objUser = JSON.parse(strUser)
+  
+delete (objUser.password)
   return  res.status(200).send({
     status: true,
     message: "User updated successfully",
-    data: updatedProfile,
+    data: objUser,
   });
   } catch (error) {
     return res.status(500).send({ status: false, message: error.message });
